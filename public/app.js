@@ -322,7 +322,16 @@ document.addEventListener("DOMContentLoaded", () => {
     // Initialize WebRTC
     async function initializeVoiceChat() {
       try {
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log("Initializing voice chat...");
+        localStream = await navigator.mediaDevices.getUserMedia({ 
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        });
+        
+        console.log("Got local audio stream:", localStream.getAudioTracks()[0].label);
         isVoiceEnabled = true;
         toggleVoiceBtn.textContent = "🎤 Stop Voice Chat";
         addSystemMessage("Voice chat enabled");
@@ -330,6 +339,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Create peer connections for existing users
         Object.keys(connectedUsers).forEach(userId => {
           if (userId !== currentUser.id) {
+            console.log("Creating peer connection for user:", userId);
             createPeerConnection(userId);
           }
         });
@@ -341,11 +351,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Stop voice chat
     function stopVoiceChat() {
+      console.log("Stopping voice chat...");
       if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
+        localStream.getTracks().forEach(track => {
+          console.log("Stopping track:", track.label);
+          track.stop();
+        });
         localStream = null;
       }
-      Object.values(peerConnections).forEach(pc => pc.close());
+      Object.values(peerConnections).forEach(pc => {
+        console.log("Closing peer connection");
+        pc.close();
+      });
       peerConnections = {};
       isVoiceEnabled = false;
       toggleVoiceBtn.textContent = "🎤 Start Voice Chat";
@@ -382,9 +399,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Handle incoming stream
       peerConnection.ontrack = (event) => {
+        console.log("Received audio track from peer:", targetUserId);
         const audioElement = document.createElement("audio");
         audioElement.srcObject = event.streams[0];
         audioElement.autoplay = true;
+        audioElement.controls = true; // Add controls for debugging
+        audioElement.style.display = "block"; // Make sure it's visible
+        audioElement.onloadedmetadata = () => {
+          console.log("Audio metadata loaded, attempting to play");
+          audioElement.play().catch(e => console.error("Error playing audio:", e));
+        };
         voiceParticipants.appendChild(audioElement);
       };
 
@@ -392,10 +416,14 @@ document.addEventListener("DOMContentLoaded", () => {
       peerConnection.createOffer()
         .then(offer => peerConnection.setLocalDescription(offer))
         .then(() => {
+          console.log("Sending voice offer to:", targetUserId);
           socket.emit("voice-offer", {
             target: targetUserId,
             offer: peerConnection.localDescription
           });
+        })
+        .catch(error => {
+          console.error("Error creating offer:", error);
         });
 
       return peerConnection;
