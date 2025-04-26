@@ -195,26 +195,32 @@ document.addEventListener("DOMContentLoaded", () => {
   
     // Add a message to the chat
     function addMessageToChat(message) {
-      const messageElement = document.createElement("div")
-      messageElement.classList.add("message")
-  
-      // Check if message is from current user
-      const isCurrentUser = message.userId === currentUser.id
-      messageElement.classList.add(isCurrentUser ? "sent" : "received")
-  
+      // Initialize the EmojiConvertor
+      const emoji = new EmojiConvertor();
+      emoji.replace_mode = 'unified'; // Use Unicode emojis
+      emoji.allow_native = true; // Allow native emojis (like phone emojis)
+    
+      // Convert the message text to include actual emojis (replace shortcodes like :heart: with actual emojis)
+      const emojiMessage = emoji.replace_colons(message.text);
+    
+      const messageElement = document.createElement("div");
+      messageElement.classList.add("message");
+    
       // Format timestamp
-      const timestamp = new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-  
+      const timestamp = new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    
       messageElement.innerHTML = `
         <div class="message-info">
           ${isCurrentUser ? "You" : message.username} • ${timestamp}
         </div>
-        <div class="message-text">${escapeHtml(message.text)}</div>
-      `
-  
-      messagesContainer.appendChild(messageElement)
-      scrollToBottom()
+        <div class="message-text">${escapeHtml(emojiMessage)}</div>
+      `;
+    
+      // Append the message to the container
+      messagesContainer.appendChild(messageElement);
+      scrollToBottom();
     }
+    
   
     // Add a system message to the chat
     function addSystemMessage(text) {
