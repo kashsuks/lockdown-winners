@@ -392,7 +392,21 @@ document.addEventListener("DOMContentLoaded", () => {
     })
   
     enterChatBtn.addEventListener("click", () => {
-      showScreen(usernameScreen)
+      // Generate a random username if not already set
+      if (!currentUser.username) {
+        currentUser.username = `User-${Math.floor(Math.random() * 1000)}`;
+      }
+      
+      // Initialize socket if not already done
+      if (!socket) {
+        initializeSocket();
+      }
+      
+      // Join session
+      socket.emit("join-session", {
+        sessionId: sessionData.sessionId,
+        username: currentUser.username,
+      });
     })
   
     backFromQrBtn.addEventListener("click", () => {
