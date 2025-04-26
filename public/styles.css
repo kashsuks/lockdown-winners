@@ -377,3 +377,57 @@
   margin: 10px auto;
   display: block;
 }
+
+.background-selector {
+  margin: 20px 0;
+  text-align: center;
+  width: 100%;
+  max-width: 600px;
+}
+
+.background-selector h3 {
+  color: white;
+  margin-bottom: 15px;
+  font-size: 1.2rem;
+}
+
+.background-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 10px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  backdrop-filter: blur(5px);
+}
+
+.background-option {
+  position: relative;
+  aspect-ratio: 16/9;
+  border-radius: 5px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.background-option:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.background-option.selected {
+  border: 3px solid #A8C0FF;
+  box-shadow: 0 0 10px rgba(168, 192, 255, 0.5);
+}
+
+.background-option img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+#chat-screen {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}

@@ -23,6 +23,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const sendBtn = document.getElementById("send-btn")
   const usersCountText = document.getElementById("users-count")
 
+  const backgroundOptions = document.getElementById("background-options")
+  let selectedBackground = null
+
   // App state
   let socket
   let sessionData = null
@@ -43,6 +46,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // Store pending offers
   const pendingOffers = {}
 
+  // Add after the App state section
+  let chatBackground = null
+
   // socket.io init
   function initializeSocket() {
     socket = io()
@@ -56,6 +62,11 @@ document.addEventListener("DOMContentLoaded", () => {
       currentUser = {
         id: data.userId,
         username: data.username,
+      }
+
+      // Set chat background if provided
+      if (data.chatBackground) {
+        chatScreen.style.backgroundImage = `url('${data.chatBackground}')`
       }
 
       // add messages
@@ -167,6 +178,11 @@ document.addEventListener("DOMContentLoaded", () => {
         console.error("No peer connection found for ICE candidate from:", data.from)
       }
     })
+
+    // Add background update handler
+    socket.on("chat-background-updated", (data) => {
+      chatScreen.style.backgroundImage = `url('${data.background}')`
+    })
   }
 
   // show a screen
@@ -192,6 +208,9 @@ document.addEventListener("DOMContentLoaded", () => {
         sessionId: data.sessionId,
         serverIp: data.serverIp,
       }
+
+      // Load background options
+      await loadBackgroundOptions()
 
       showScreen(qrScreen)
     } catch (error) {
@@ -266,10 +285,11 @@ document.addEventListener("DOMContentLoaded", () => {
       initializeSocket()
     }
 
-    // Join session
+    // Join session with selected background
     socket.emit("join-session", {
       sessionId: sessionData.sessionId,
       username: username,
+      chatBackground: selectedBackground
     })
   }
 
@@ -392,7 +412,20 @@ document.addEventListener("DOMContentLoaded", () => {
   })
 
   enterChatBtn.addEventListener("click", () => {
-    showScreen(usernameScreen)
+    if (!currentUser.username) {
+      currentUser.username = `User-${Math.floor(Math.random() * 1000)}`
+    }
+    
+    if (!socket) {
+      initializeSocket()
+    }
+    
+    // Join session with selected background
+    socket.emit("join-session", {
+      sessionId: sessionData.sessionId,
+      username: currentUser.username,
+      chatBackground: selectedBackground
+    })
   })
 
   backFromQrBtn.addEventListener("click", () => {
@@ -720,4 +753,31 @@ document.addEventListener("DOMContentLoaded", () => {
       stopVoiceChat()
     }
   })
+
+  // Add this function after createRoom()
+  async function loadBackgroundOptions() {
+    try {
+      const response = await fetch("/api/chat-backgrounds")
+      const backgrounds = await response.json()
+      
+      backgroundOptions.innerHTML = backgrounds.map(bg => `
+        <div class="background-option" data-background="${bg.path}">
+          <img src="${bg.path}" alt="Chat background option">
+        </div>
+      `).join("")
+
+      // Add click handlers
+      document.querySelectorAll(".background-option").forEach(option => {
+        option.addEventListener("click", () => {
+          // Remove previous selection
+          document.querySelectorAll(".background-option").forEach(opt => opt.classList.remove("selected"))
+          // Add selection to clicked option
+          option.classList.add("selected")
+          selectedBackground = option.dataset.background
+        })
+      })
+    } catch (error) {
+      console.error("Error loading background options:", error)
+    }
+  }
 })

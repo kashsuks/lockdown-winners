@@ -6,6 +6,7 @@ const QRCode = require("qrcode");
 const { v4: uuidv4 } = require("uuid");
 const os = require("os");
 const SerialPort = require("serialport");
+const fs = require("fs");
 
 const app = express();
 const server = http.createServer(app);
@@ -65,6 +66,24 @@ const arduinoPort = new SerialPort("/dev/cu.usbmodem101", { baudRate: 9600 }, (e
   }
 });
 
+// Add this route before your socket.io setup
+app.get("/api/chat-backgrounds", (req, res) => {
+  const backgroundsDir = path.join(__dirname, "public/assets/chat_backgrounds");
+  try {
+    const files = fs.readdirSync(backgroundsDir);
+    const backgrounds = files
+      .filter(file => /\.(jpg|jpeg|png|gif)$/i.test(file))
+      .map(file => ({
+        name: file,
+        path: `/assets/chat_backgrounds/${file}`
+      }));
+    res.json(backgrounds);
+  } catch (error) {
+    console.error("Error reading backgrounds directory:", error);
+    res.status(500).json({ error: "Failed to load backgrounds" });
+  }
+});
+
 // Socket.io connection handling
 io.on("connection", (socket) => {
   let currentSessionId = null;
@@ -94,11 +113,21 @@ io.on("connection", (socket) => {
     console.log(`User ${username} (${userId}) joined session ${sessionId}`);
     socket.join(sessionId);
 
+    // If this user is providing a background, update it for the session
+    if (data.chatBackground) {
+      chatSessions[sessionId].chatBackground = data.chatBackground;
+      // Notify all users in the session about the background
+      io.to(sessionId).emit("chat-background-updated", {
+        background: data.chatBackground
+      });
+    }
+
     socket.emit("session-joined", {
       sessionId,
       messages: chatSessions[sessionId].messages,
       userId,
       username: chatSessions[sessionId].users[userId].username,
+      chatBackground: chatSessions[sessionId].chatBackground
     });
 
     socket.to(sessionId).emit("user-joined", {
