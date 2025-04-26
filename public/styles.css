@@ -98,19 +98,20 @@
   .option {
     flex: 1;
     min-width: 250px;
-    background-color: #c063af;
+    background-color: #220135;
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
     color: white;
   }
   
   .option:hover {
     transform: translateY(-5px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+    background-color: #2a0142;
   }
   
   .option p {
@@ -144,25 +145,25 @@
   }
   
   .btn.primary {
-    background-color: #333333;
+    background-color: #520380;
     color: white;
   }
   
   .btn.primary:hover {
-    background-color: #555555;
+    background-color: #6a04a3;
     transform: scale(1.05);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   }
   
   .btn.secondary {
-    background-color: #333333;
+    background-color: #520380;
     color: white;
   }
   
   .btn.secondary:hover {
-    background-color: #555555;
+    background-color: #6a04a3;
     transform: scale(1.05);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   }
   
   .btn.small {
