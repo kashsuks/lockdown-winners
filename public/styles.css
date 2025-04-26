@@ -30,6 +30,84 @@
     display: flex;
   }
   
+  /* Welcome Screen Styles */
+  #welcome-screen {
+    background-image: url('assets/backgroundEchoLink.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  
+  #welcome-screen::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1;
+  }
+  
+  .welcome-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    height: 100%;
+    text-align: center;
+  }
+  
+  .welcome-title {
+    color: white;
+    font-size: 3rem;
+    margin-bottom: 20px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  }
+  
+  .welcome-description {
+    color: white;
+    font-size: 1.2rem;
+    margin-bottom: 40px;
+    max-width: 600px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+  
+  .welcome-options {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .option {
+    flex: 1;
+    min-width: 250px;
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .option:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  .option p {
+    margin-bottom: 20px;
+    flex-grow: 1;
+  }
+  
   h1 {
     text-align: center;
     margin-bottom: 20px;
@@ -39,28 +117,6 @@
   h2 {
     color: #3498db;
     margin-bottom: 10px;
-  }
-  
-  .welcome-options {
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
-  }
-  
-  .option {
-    flex: 1;
-    min-width: 250px;
-    background-color: white;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .option p {
-    margin-bottom: 20px;
-    flex-grow: 1;
   }
   
   .btn {
@@ -252,37 +308,24 @@
   
   #voice-participants audio {
     width: 100%;
-    height: 40px;
-    background-color: #fff;
-    border: 1px solid #ddd;
-    border-radius: 4px;
   }
   
-  .audio-indicator {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    margin-bottom: 5px;
-    font-size: 0.9rem;
-  }
-  
-  .audio-indicator .indicator {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background-color: #4caf50;
-    animation: pulse 1.5s infinite;
-  }
-  
-  @keyframes pulse {
-    0% {
-      opacity: 0.5;
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .welcome-title {
+      font-size: 2.5rem;
     }
-    50% {
-      opacity: 1;
+    
+    .welcome-description {
+      font-size: 1rem;
     }
-    100% {
-      opacity: 0.5;
+    
+    .welcome-options {
+      flex-direction: column;
+    }
+    
+    .option {
+      min-width: 100%;
     }
   }
   
