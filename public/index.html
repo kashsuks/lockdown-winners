@@ -53,14 +53,20 @@
 
     <div id="chat-screen" class="screen">
       <div class="chat-header">
-        <h2>Chat Room</h2>
-        <p id="users-count">Users: 1</p>
-        <button id="leave-chat-btn" class="btn secondary small">Leave</button>
+        <button id="leave-chat-btn" class="btn">Leave Chat</button>
+        <span id="users-count">Users: 1</span>
       </div>
       <div id="messages-container"></div>
-      <div class="message-input">
+      <div class="chat-input-container">
         <input type="text" id="message-input" placeholder="Type a message...">
-        <button id="send-btn" class="btn primary">Send</button>
+        <button id="send-btn" class="btn">Send</button>
+      </div>
+      <div class="voice-chat-container">
+        <button id="toggle-voice-btn" class="btn">🎤 Start Voice Chat</button>
+        <div id="voice-status" style="text-align: center; margin-top: 10px; font-size: 0.9rem; display: none;">
+          Voice chat is active
+        </div>
+        <div id="voice-participants"></div>
       </div>
     </div>
   </div>
