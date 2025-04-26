@@ -96,24 +96,33 @@ document.addEventListener("DOMContentLoaded", () => {
   
       socket.on("voice-offer", async (data) => {
         console.log("Received voice offer from:", data.from)
+        console.log("Offer data:", JSON.stringify(data.offer, null, 2))
+        
         if (!isVoiceEnabled) {
           console.log("Voice chat not enabled, ignoring offer")
           return
         }
-  
+
         try {
+          console.log("Creating peer connection for offer from:", data.from)
           const peerConnection = createPeerConnection(data.from)
+          
           console.log("Setting remote description from offer")
           await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer))
+          
           console.log("Creating answer")
           const answer = await peerConnection.createAnswer()
+          
           console.log("Setting local description from answer")
           await peerConnection.setLocalDescription(answer)
+          
           console.log("Sending answer to:", data.from)
           socket.emit("voice-answer", {
             target: data.from,
             answer: answer,
           })
+          
+          console.log("Answer sent successfully")
         } catch (error) {
           console.error("Error handling voice offer:", error)
         }
@@ -121,27 +130,37 @@ document.addEventListener("DOMContentLoaded", () => {
   
       socket.on("voice-answer", async (data) => {
         console.log("Received voice answer from:", data.from)
+        console.log("Answer data:", JSON.stringify(data.answer, null, 2))
+        
         const peerConnection = peerConnections[data.from]
         if (peerConnection) {
           try {
             console.log("Setting remote description from answer")
             await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer))
+            console.log("Remote description set successfully")
           } catch (error) {
             console.error("Error setting remote description:", error)
           }
+        } else {
+          console.error("No peer connection found for user:", data.from)
         }
       })
   
       socket.on("voice-ice-candidate", async (data) => {
         console.log("Received ICE candidate from:", data.from)
+        console.log("ICE candidate data:", JSON.stringify(data.candidate, null, 2))
+        
         const peerConnection = peerConnections[data.from]
         if (peerConnection) {
           try {
             console.log("Adding ICE candidate")
             await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate))
+            console.log("ICE candidate added successfully")
           } catch (error) {
             console.error("Error adding ICE candidate:", error)
           }
+        } else {
+          console.error("No peer connection found for ICE candidate from:", data.from)
         }
       })
     }
