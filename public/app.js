@@ -34,11 +34,11 @@ document.addEventListener("DOMContentLoaded", () => {
     let html5QrCode
   
     // Voice chat state
-    let isVoiceEnabled = false;
-    let localStream = null;
-    let peerConnections = {};
-    const voiceParticipants = document.getElementById("voice-participants");
-    const toggleVoiceBtn = document.getElementById("toggle-voice-btn");
+    let isVoiceEnabled = false
+    let localStream = null
+    let peerConnections = {}
+    const voiceParticipants = document.getElementById("voice-participants")
+    const toggleVoiceBtn = document.getElementById("toggle-voice-btn")
   
     // socket.io init
     function initializeSocket() {
@@ -68,9 +68,9 @@ document.addEventListener("DOMContentLoaded", () => {
         connectedUsers[data.userId] = data.username
         updateUsersCount()
         addSystemMessage(`${data.username} joined the chat`)
-
+  
         if (isVoiceEnabled) {
-          createPeerConnection(data.userId);
+          createPeerConnection(data.userId)
         }
       })
   
@@ -78,10 +78,10 @@ document.addEventListener("DOMContentLoaded", () => {
         delete connectedUsers[data.userId]
         updateUsersCount()
         addSystemMessage(`${data.username} left the chat`)
-
+  
         if (peerConnections[data.userId]) {
-          peerConnections[data.userId].close();
-          delete peerConnections[data.userId];
+          peerConnections[data.userId].close()
+          delete peerConnections[data.userId]
         }
       })
   
@@ -92,6 +92,57 @@ document.addEventListener("DOMContentLoaded", () => {
       socket.on("error", (data) => {
         alert(data.message)
         showScreen(welcomeScreen)
+      })
+  
+      socket.on("voice-offer", async (data) => {
+        console.log("Received voice offer from:", data.from)
+        if (!isVoiceEnabled) {
+          console.log("Voice chat not enabled, ignoring offer")
+          return
+        }
+  
+        try {
+          const peerConnection = createPeerConnection(data.from)
+          console.log("Setting remote description from offer")
+          await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer))
+          console.log("Creating answer")
+          const answer = await peerConnection.createAnswer()
+          console.log("Setting local description from answer")
+          await peerConnection.setLocalDescription(answer)
+          console.log("Sending answer to:", data.from)
+          socket.emit("voice-answer", {
+            target: data.from,
+            answer: answer,
+          })
+        } catch (error) {
+          console.error("Error handling voice offer:", error)
+        }
+      })
+  
+      socket.on("voice-answer", async (data) => {
+        console.log("Received voice answer from:", data.from)
+        const peerConnection = peerConnections[data.from]
+        if (peerConnection) {
+          try {
+            console.log("Setting remote description from answer")
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer))
+          } catch (error) {
+            console.error("Error setting remote description:", error)
+          }
+        }
+      })
+  
+      socket.on("voice-ice-candidate", async (data) => {
+        console.log("Received ICE candidate from:", data.from)
+        const peerConnection = peerConnections[data.from]
+        if (peerConnection) {
+          try {
+            console.log("Adding ICE candidate")
+            await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate))
+          } catch (error) {
+            console.error("Error adding ICE candidate:", error)
+          }
+        }
       })
     }
   
@@ -222,11 +273,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const timestamp = new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
   
       messageElement.innerHTML = `
-        <div class="message-info">
-          ${isCurrentUser ? "You" : message.username} • ${timestamp}
-        </div>
-        <div class="message-text">${escapeHtml(message.text)}</div>
-      `
+          <div class="message-info">
+            ${isCurrentUser ? "You" : message.username} • ${timestamp}
+          </div>
+          <div class="message-text">${escapeHtml(message.text)}</div>
+        `
   
       messagesContainer.appendChild(messageElement)
       scrollToBottom()
@@ -318,221 +369,215 @@ document.addEventListener("DOMContentLoaded", () => {
   
     // Initialize the app
     initializeSocket()
-
+  
     // Initialize WebRTC
     async function initializeVoiceChat() {
       try {
-        console.log("Initializing voice chat...");
-        localStream = await navigator.mediaDevices.getUserMedia({ 
+        console.log("Initializing voice chat...")
+  
+        // First check if the browser supports getUserMedia
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error("Your browser doesn't support audio capture")
+        }
+  
+        localStream = await navigator.mediaDevices.getUserMedia({
           audio: {
             echoCancellation: true,
             noiseSuppression: true,
-            autoGainControl: true
-          }
-        });
-        
-        console.log("Got local audio stream:", localStream.getAudioTracks()[0].label);
-        isVoiceEnabled = true;
-        toggleVoiceBtn.textContent = "🎤 Stop Voice Chat";
-        addSystemMessage("Voice chat enabled");
-
+            autoGainControl: true,
+          },
+          video: false,
+        })
+  
+        console.log("Got local audio stream:", localStream.getAudioTracks()[0].label)
+  
+        // Check if we actually got audio tracks
+        if (localStream.getAudioTracks().length === 0) {
+          throw new Error("No audio track was captured")
+        }
+  
+        isVoiceEnabled = true
+        toggleVoiceBtn.textContent = "🎤 Stop Voice Chat"
+        toggleVoiceBtn.style.backgroundColor = "#e74c3c"
+        addSystemMessage("Voice chat enabled")
+  
         // Create peer connections for existing users
-        Object.keys(connectedUsers).forEach(userId => {
+        Object.keys(connectedUsers).forEach((userId) => {
           if (userId !== currentUser.id) {
-            console.log("Creating peer connection for user:", userId);
-            createPeerConnection(userId);
+            console.log("Creating peer connection for user:", userId)
+            createPeerConnection(userId)
           }
-        });
+        })
+  
+        // Add a test tone to verify audio is working
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)()
+        const oscillator = audioContext.createOscillator()
+        const gainNode = audioContext.createGain()
+  
+        oscillator.type = "sine"
+        oscillator.frequency.setValueAtTime(440, audioContext.currentTime) // A4 note
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime) // Low volume
+  
+        oscillator.connect(gainNode)
+        gainNode.connect(audioContext.destination)
+  
+        oscillator.start()
+        setTimeout(() => {
+          oscillator.stop()
+        }, 500)
       } catch (error) {
-        console.error("Error accessing microphone:", error);
-        alert("Could not access microphone. Please check your permissions.");
+        console.error("Error accessing microphone:", error)
+        alert("Could not access microphone: " + error.message)
+        stopVoiceChat()
       }
     }
-
+  
     // Stop voice chat
     function stopVoiceChat() {
-      console.log("Stopping voice chat...");
+      console.log("Stopping voice chat...")
       if (localStream) {
-        localStream.getTracks().forEach(track => {
-          console.log("Stopping track:", track.label);
-          track.stop();
-        });
-        localStream = null;
+        localStream.getTracks().forEach((track) => {
+          console.log("Stopping track:", track.label)
+          track.stop()
+        })
+        localStream = null
       }
-      Object.values(peerConnections).forEach(pc => {
-        console.log("Closing peer connection");
-        pc.close();
-      });
-      peerConnections = {};
-      isVoiceEnabled = false;
-      toggleVoiceBtn.textContent = "🎤 Start Voice Chat";
-      voiceParticipants.innerHTML = "";
-      addSystemMessage("Voice chat disabled");
+      Object.values(peerConnections).forEach((pc) => {
+        console.log("Closing peer connection")
+        pc.close()
+      })
+      peerConnections = {}
+      isVoiceEnabled = false
+      toggleVoiceBtn.textContent = "🎤 Start Voice Chat"
+      voiceParticipants.innerHTML = ""
+      addSystemMessage("Voice chat disabled")
     }
-
+  
     // Create peer connection
     function createPeerConnection(targetUserId) {
-      console.log("Creating new peer connection for user:", targetUserId);
+      console.log("Creating new peer connection for user:", targetUserId)
+  
+      // Check if connection already exists
+      if (peerConnections[targetUserId]) {
+        console.log("Peer connection already exists for:", targetUserId)
+        return peerConnections[targetUserId]
+      }
+  
       const peerConnection = new RTCPeerConnection({
         iceServers: [
           { urls: "stun:stun.l.google.com:19302" },
           { urls: "stun:stun1.l.google.com:19302" },
-          { urls: "stun:stun2.l.google.com:19302" }
-        ]
-      });
-
-      peerConnections[targetUserId] = peerConnection;
-
+          { urls: "stun:stun2.l.google.com:19302" },
+          {
+            urls: "turn:numb.viagenie.ca",
+            credential: "muazkh",
+            username: "webrtc@live.com",
+          },
+        ],
+      })
+  
+      peerConnections[targetUserId] = peerConnection
+  
       // Add local stream
       if (localStream) {
-        console.log("Adding local stream tracks to peer connection");
-        localStream.getTracks().forEach(track => {
-          console.log("Adding track:", track.kind, track.label);
-          peerConnection.addTrack(track, localStream);
-        });
+        console.log("Adding local stream tracks to peer connection")
+        localStream.getTracks().forEach((track) => {
+          console.log("Adding track:", track.kind, track.label)
+          peerConnection.addTrack(track, localStream)
+        })
       }
-
+  
       // Handle ICE candidates
       peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
-          console.log("Sending ICE candidate to:", targetUserId);
+          console.log("Sending ICE candidate to:", targetUserId)
           socket.emit("voice-ice-candidate", {
             target: targetUserId,
-            candidate: event.candidate
-          });
+            candidate: event.candidate,
+          })
         }
-      };
-
+      }
+  
       // Handle connection state changes
       peerConnection.onconnectionstatechange = () => {
-        console.log("Connection state changed:", peerConnection.connectionState);
-      };
-
+        console.log("Connection state changed:", peerConnection.connectionState)
+        if (peerConnection.connectionState === "failed" || peerConnection.connectionState === "disconnected") {
+          console.log("Connection failed or disconnected, attempting to reconnect")
+          // Close the old connection
+          peerConnection.close()
+          delete peerConnections[targetUserId]
+          // Try to create a new connection after a short delay
+          setTimeout(() => {
+            if (isVoiceEnabled) {
+              createPeerConnection(targetUserId)
+            }
+          }, 2000)
+        }
+      }
+  
       // Handle ICE connection state changes
       peerConnection.oniceconnectionstatechange = () => {
-        console.log("ICE connection state:", peerConnection.iceConnectionState);
-      };
-
+        console.log("ICE connection state:", peerConnection.iceConnectionState)
+      }
+  
       // Handle incoming stream
       peerConnection.ontrack = (event) => {
-        console.log("Received audio track from peer:", targetUserId);
-        console.log("Track info:", event.track.kind, event.track.label);
-        console.log("Stream info:", event.streams[0].id);
-        
-        const audioElement = document.createElement("audio");
-        audioElement.srcObject = event.streams[0];
-        audioElement.autoplay = true;
-        audioElement.controls = true;
-        audioElement.style.display = "block";
-        
+        console.log("Received audio track from peer:", targetUserId)
+        console.log("Track info:", event.track.kind, event.track.label)
+        console.log("Stream info:", event.streams[0].id)
+  
+        // Remove any existing audio element for this user
+        const existingElement = document.querySelector(`[data-user-id="${targetUserId}"]`)
+        if (existingElement) {
+          existingElement.remove()
+        }
+  
+        const audioElement = document.createElement("audio")
+        audioElement.srcObject = event.streams[0]
+        audioElement.autoplay = true
+        audioElement.controls = true
+        audioElement.style.display = "block"
+        audioElement.setAttribute("data-user-id", targetUserId)
+  
         // Add volume control
-        const volumeControl = document.createElement("input");
-        volumeControl.type = "range";
-        volumeControl.min = 0;
-        volumeControl.max = 1;
-        volumeControl.step = 0.1;
-        volumeControl.value = 1;
-        volumeControl.style.width = "100%";
+        const volumeControl = document.createElement("input")
+        volumeControl.type = "range"
+        volumeControl.min = 0
+        volumeControl.max = 1
+        volumeControl.step = 0.1
+        volumeControl.value = 1
+        volumeControl.style.width = "100%"
         volumeControl.oninput = (e) => {
-          audioElement.volume = e.target.value;
-        };
-
-        const container = document.createElement("div");
-        container.style.marginBottom = "10px";
-        container.appendChild(audioElement);
-        container.appendChild(volumeControl);
-        
-        voiceParticipants.appendChild(container);
-
+          audioElement.volume = e.target.value
+        }
+  
+        const container = document.createElement("div")
+        container.style.marginBottom = "10px"
+        container.setAttribute("data-user-id", targetUserId)
+        container.appendChild(audioElement)
+        container.appendChild(volumeControl)
+  
+        voiceParticipants.appendChild(container)
+  
         audioElement.onloadedmetadata = () => {
-          console.log("Audio metadata loaded, attempting to play");
-          audioElement.play().catch(e => {
-            console.error("Error playing audio:", e);
-            alert("Error playing audio. Please check your browser's audio settings.");
-          });
-        };
-      };
-
-      // Create and send offer
-      console.log("Creating offer for peer:", targetUserId);
-      peerConnection.createOffer()
-        .then(offer => {
-          console.log("Offer created:", offer);
-          return peerConnection.setLocalDescription(offer);
-        })
-        .then(() => {
-          console.log("Local description set, sending offer to:", targetUserId);
-          socket.emit("voice-offer", {
-            target: targetUserId,
-            offer: peerConnection.localDescription
-          });
-        })
-        .catch(error => {
-          console.error("Error in offer creation:", error);
-        });
-
-      return peerConnection;
+          console.log("Audio metadata loaded, attempting to play")
+          audioElement.play().catch((e) => {
+            console.error("Error playing audio:", e)
+            alert("Error playing audio. Please check your browser's audio settings.")
+          })
+        }
+      }
+  
+      return peerConnection
     }
-
+  
     // Handle voice chat toggle
     toggleVoiceBtn.addEventListener("click", () => {
       if (!isVoiceEnabled) {
-        initializeVoiceChat();
+        initializeVoiceChat()
       } else {
-        stopVoiceChat();
+        stopVoiceChat()
       }
-    });
-
-    // WebRTC signaling handlers
-    socket.on("voice-offer", async (data) => {
-      console.log("Received voice offer from:", data.from);
-      if (!isVoiceEnabled) {
-        console.log("Voice chat not enabled, ignoring offer");
-        return;
-      }
-
-      try {
-        const peerConnection = createPeerConnection(data.from);
-        console.log("Setting remote description from offer");
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
-        console.log("Creating answer");
-        const answer = await peerConnection.createAnswer();
-        console.log("Setting local description from answer");
-        await peerConnection.setLocalDescription(answer);
-        console.log("Sending answer to:", data.from);
-        socket.emit("voice-answer", {
-          target: data.from,
-          answer: answer
-        });
-      } catch (error) {
-        console.error("Error handling voice offer:", error);
-      }
-    });
-
-    socket.on("voice-answer", async (data) => {
-      console.log("Received voice answer from:", data.from);
-      const peerConnection = peerConnections[data.from];
-      if (peerConnection) {
-        try {
-          console.log("Setting remote description from answer");
-          await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-        } catch (error) {
-          console.error("Error setting remote description:", error);
-        }
-      }
-    });
-
-    socket.on("voice-ice-candidate", async (data) => {
-      console.log("Received ICE candidate from:", data.from);
-      const peerConnection = peerConnections[data.from];
-      if (peerConnection) {
-        try {
-          console.log("Adding ICE candidate");
-          await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-        } catch (error) {
-          console.error("Error adding ICE candidate:", error);
-        }
-      }
-    });
+    })
   })
   
