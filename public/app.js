@@ -33,6 +33,13 @@ document.addEventListener("DOMContentLoaded", () => {
     let connectedUsers = {}
     let html5QrCode
   
+    // Voice chat state
+    let isVoiceEnabled = false;
+    let localStream = null;
+    let peerConnections = {};
+    const voiceParticipants = document.getElementById("voice-participants");
+    const toggleVoiceBtn = document.getElementById("toggle-voice-btn");
+  
     // socket.io init
     function initializeSocket() {
       socket = io()
@@ -61,12 +68,21 @@ document.addEventListener("DOMContentLoaded", () => {
         connectedUsers[data.userId] = data.username
         updateUsersCount()
         addSystemMessage(`${data.username} joined the chat`)
+
+        if (isVoiceEnabled) {
+          createPeerConnection(data.userId);
+        }
       })
   
       socket.on("user-left", (data) => {
         delete connectedUsers[data.userId]
         updateUsersCount()
         addSystemMessage(`${data.username} left the chat`)
+
+        if (peerConnections[data.userId]) {
+          peerConnections[data.userId].close();
+          delete peerConnections[data.userId];
+        }
       })
   
       socket.on("new-message", (data) => {
@@ -302,5 +318,125 @@ document.addEventListener("DOMContentLoaded", () => {
   
     // Initialize the app
     initializeSocket()
+
+    // Initialize WebRTC
+    async function initializeVoiceChat() {
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        isVoiceEnabled = true;
+        toggleVoiceBtn.textContent = "🎤 Stop Voice Chat";
+        addSystemMessage("Voice chat enabled");
+
+        // Create peer connections for existing users
+        Object.keys(connectedUsers).forEach(userId => {
+          if (userId !== currentUser.id) {
+            createPeerConnection(userId);
+          }
+        });
+      } catch (error) {
+        console.error("Error accessing microphone:", error);
+        alert("Could not access microphone. Please check your permissions.");
+      }
+    }
+
+    // Stop voice chat
+    function stopVoiceChat() {
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+      }
+      Object.values(peerConnections).forEach(pc => pc.close());
+      peerConnections = {};
+      isVoiceEnabled = false;
+      toggleVoiceBtn.textContent = "🎤 Start Voice Chat";
+      voiceParticipants.innerHTML = "";
+      addSystemMessage("Voice chat disabled");
+    }
+
+    // Create peer connection
+    function createPeerConnection(targetUserId) {
+      const peerConnection = new RTCPeerConnection({
+        iceServers: [
+          { urls: "stun:stun.l.google.com:19302" }
+        ]
+      });
+
+      peerConnections[targetUserId] = peerConnection;
+
+      // Add local stream
+      if (localStream) {
+        localStream.getTracks().forEach(track => {
+          peerConnection.addTrack(track, localStream);
+        });
+      }
+
+      // Handle ICE candidates
+      peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket.emit("voice-ice-candidate", {
+            target: targetUserId,
+            candidate: event.candidate
+          });
+        }
+      };
+
+      // Handle incoming stream
+      peerConnection.ontrack = (event) => {
+        const audioElement = document.createElement("audio");
+        audioElement.srcObject = event.streams[0];
+        audioElement.autoplay = true;
+        voiceParticipants.appendChild(audioElement);
+      };
+
+      // Create and send offer
+      peerConnection.createOffer()
+        .then(offer => peerConnection.setLocalDescription(offer))
+        .then(() => {
+          socket.emit("voice-offer", {
+            target: targetUserId,
+            offer: peerConnection.localDescription
+          });
+        });
+
+      return peerConnection;
+    }
+
+    // Handle voice chat toggle
+    toggleVoiceBtn.addEventListener("click", () => {
+      if (!isVoiceEnabled) {
+        initializeVoiceChat();
+      } else {
+        stopVoiceChat();
+      }
+    });
+
+    // WebRTC signaling handlers
+    socket.on("voice-offer", async (data) => {
+      if (!isVoiceEnabled) return;
+
+      const peerConnection = createPeerConnection(data.from);
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+      const answer = await peerConnection.createAnswer();
+      await peerConnection.setLocalDescription(answer);
+
+      socket.emit("voice-answer", {
+        target: data.from,
+        answer: answer
+      });
+    });
+
+    socket.on("voice-answer", async (data) => {
+      const peerConnection = peerConnections[data.from];
+      if (peerConnection) {
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+      }
+    });
+
+    socket.on("voice-ice-candidate", async (data) => {
+      const peerConnection = peerConnections[data.from];
+      if (peerConnection) {
+        await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+      }
+    });
   })
   

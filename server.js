@@ -124,6 +124,28 @@ io.on("connection", (socket) => {
       }
     }
   });
+
+  // WebRTC signaling
+  socket.on("voice-offer", (data) => {
+    socket.to(data.target).emit("voice-offer", {
+      offer: data.offer,
+      from: userId
+    });
+  });
+
+  socket.on("voice-answer", (data) => {
+    socket.to(data.target).emit("voice-answer", {
+      answer: data.answer,
+      from: userId
+    });
+  });
+
+  socket.on("voice-ice-candidate", (data) => {
+    socket.to(data.target).emit("voice-ice-candidate", {
+      candidate: data.candidate,
+      from: userId
+    });
+  });
 });
 
 // Start server
