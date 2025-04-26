@@ -8,6 +8,10 @@
   body {
     background-color: #f5f5f5;
     color: #333;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    overflow-x: hidden;
   }
   
   .container {
@@ -32,13 +36,16 @@
   
   /* Welcome Screen Styles */
   #welcome-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     background-image: url('assets/backgroundEchoLink.jpg');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    position: relative;
-    border-radius: 10px;
-    overflow: hidden;
+    z-index: 10;
   }
   
   #welcome-screen::before {
@@ -62,11 +69,13 @@
     padding: 40px 20px;
     height: 100%;
     text-align: center;
+    max-width: 800px;
+    margin: 0 auto;
   }
   
   .welcome-title {
     color: white;
-    font-size: 3rem;
+    font-size: 3.5rem;
     margin-bottom: 20px;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
   }
