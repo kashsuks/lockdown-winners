@@ -57,7 +57,7 @@ app.get("/api/generate-qr", (req, res) => {
 });
 
 // Initialize serial port for Arduino
-const arduinoPort = new SerialPort("/dev/ttyUSB0", { baudRate: 9600 }, (err) => {
+const arduinoPort = new SerialPort("/dev/cu.usbmodem1101", { baudRate: 9600 }, (err) => {
   if (err) {
     console.error("Error opening serial port:", err);
   } else {
