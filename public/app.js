@@ -1,5 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
     // DOM Elements
+    const emoji = require('emoji');
+
     const welcomeScreen = document.getElementById("welcome-screen")
     const qrScreen = document.getElementById("qr-screen")
     const scannerScreen = document.getElementById("scanner-screen")
@@ -195,19 +197,17 @@ document.addEventListener("DOMContentLoaded", () => {
   
     // Add a message to the chat
     function addMessageToChat(message) {
-      // Initialize the EmojiConvertor
-      const emoji = new EmojiConvertor();
-      emoji.replace_mode = 'unified'; // Use Unicode emojis
-      emoji.allow_native = true; // Allow native emojis (like phone emojis)
-    
-      // Convert the message text to include actual emojis (replace shortcodes like :heart: with actual emojis)
-      const emojiMessage = emoji.replace_colons(message.text);
-    
       const messageElement = document.createElement("div");
       messageElement.classList.add("message");
     
       // Format timestamp
-      const timestamp = new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const timestamp = new Date(message.timestamp).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    
+      // Convert emoji shortcodes to actual emojis
+      const emojiMessage = emoji.emojify(message.text); // <-- MAGIC happens here
     
       messageElement.innerHTML = `
         <div class="message-info">
@@ -216,10 +216,10 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="message-text">${escapeHtml(emojiMessage)}</div>
       `;
     
-      // Append the message to the container
       messagesContainer.appendChild(messageElement);
       scrollToBottom();
     }
+    
     
   
     // Add a system message to the chat
