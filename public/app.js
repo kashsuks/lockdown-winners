@@ -273,37 +273,69 @@ document.addEventListener("DOMContentLoaded", () => {
       })
     }
   
+    // Convert emoji codes to actual emojis
+    function convertEmojis(text) {
+      const emojiMap = {
+        ':smile:': '😊',
+        ':laugh:': '😂',
+        ':heart:': '❤️',
+        ':thumbsup:': '👍',
+        ':thumbsdown:': '👎',
+        ':fire:': '🔥',
+        ':rocket:': '🚀',
+        ':star:': '⭐',
+        ':skull:': '💀',
+        ':ghost:': '👻',
+        ':wave:': '👋',
+        ':clap:': '👏',
+        ':eyes:': '👀',
+        ':thinking:': '🤔',
+        ':sunglasses:': '😎',
+        ':cry:': '😢',
+        ':angry:': '😠',
+        ':poop:': '💩',
+        ':ok:': '👌',
+        ':pray:': '🙏'
+      };
+
+      return text.replace(/:([a-zA-Z]+):/g, (match, code) => {
+        return emojiMap[`:${code}:`] || match;
+      });
+    }
+
     // Send a chat message
     function sendMessage() {
-      const message = messageInput.value.trim()
-  
-      if (!message) return
-  
-      socket.emit("send-message", { message })
-      messageInput.value = ""
+      const message = messageInput.value.trim();
+
+      if (!message) return;
+
+      // Convert emoji codes to actual emojis before sending
+      const messageWithEmojis = convertEmojis(message);
+      socket.emit("send-message", { message: messageWithEmojis });
+      messageInput.value = "";
     }
   
     // Add a message to the chat
     function addMessageToChat(message) {
-      const messageElement = document.createElement("div")
-      messageElement.classList.add("message")
-  
+      const messageElement = document.createElement("div");
+      messageElement.classList.add("message");
+
       // Check if message is from current user
-      const isCurrentUser = message.userId === currentUser.id
-      messageElement.classList.add(isCurrentUser ? "sent" : "received")
-  
+      const isCurrentUser = message.userId === currentUser.id;
+      messageElement.classList.add(isCurrentUser ? "sent" : "received");
+
       // Format timestamp
-      const timestamp = new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-  
+      const timestamp = new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
       messageElement.innerHTML = `
           <div class="message-info">
             ${isCurrentUser ? "You" : message.username} • ${timestamp}
           </div>
-          <div class="message-text">${escapeHtml(message.text)}</div>
-        `
-  
-      messagesContainer.appendChild(messageElement)
-      scrollToBottom()
+          <div class="message-text">${message.text}</div>
+        `;
+
+      messagesContainer.appendChild(messageElement);
+      scrollToBottom();
     }
   
     // Add a system message to the chat
