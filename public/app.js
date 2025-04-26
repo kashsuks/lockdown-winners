@@ -39,6 +39,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let peerConnections = {}
     const voiceParticipants = document.getElementById("voice-participants")
     const toggleVoiceBtn = document.getElementById("toggle-voice-btn")
+    
+    // Store pending offers
+    const pendingOffers = {}
   
     // socket.io init
     function initializeSocket() {
@@ -99,7 +102,8 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log("Offer data:", JSON.stringify(data.offer, null, 2))
         
         if (!isVoiceEnabled) {
-          console.log("Voice chat not enabled, ignoring offer")
+          console.log("Voice chat not enabled, storing offer for later")
+          pendingOffers[data.from] = data.offer
           return
         }
 
@@ -419,6 +423,26 @@ document.addEventListener("DOMContentLoaded", () => {
         toggleVoiceBtn.textContent = "🎤 Stop Voice Chat"
         toggleVoiceBtn.style.backgroundColor = "#e74c3c"
         addSystemMessage("Voice chat enabled")
+  
+        // Process any pending offers
+        for (const [userId, offer] of Object.entries(pendingOffers)) {
+          console.log("Processing pending offer from:", userId)
+          try {
+            const peerConnection = createPeerConnection(userId)
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(offer))
+            const answer = await peerConnection.createAnswer()
+            await peerConnection.setLocalDescription(answer)
+            socket.emit("voice-answer", {
+              target: userId,
+              answer: answer,
+            })
+            console.log("Sent answer to pending offer from:", userId)
+          } catch (error) {
+            console.error("Error processing pending offer:", error)
+          }
+        }
+        // Clear pending offers
+        Object.keys(pendingOffers).forEach(key => delete pendingOffers[key])
   
         // Create peer connections for existing users
         Object.keys(connectedUsers).forEach((userId) => {
