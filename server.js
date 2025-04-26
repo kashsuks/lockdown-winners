@@ -135,7 +135,7 @@ io.on("connection", (socket) => {
 
   // WebRTC signaling with improved logging
   socket.on("voice-offer", (data) => {
-    console.log(`data: ${data}`)
+    console.log("Voice offer data:", JSON.stringify(data, null, 2))
     console.log(`Voice offer from ${userId} to ${data.target}`)
     const targetUser = findUserById(data.target)
     if (targetUser) {

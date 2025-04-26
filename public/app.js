@@ -485,6 +485,24 @@ document.addEventListener("DOMContentLoaded", () => {
           console.log("Adding track:", track.kind, track.label)
           peerConnection.addTrack(track, localStream)
         })
+
+        // Create and send offer
+        console.log("Creating offer for peer:", targetUserId)
+        peerConnection.createOffer()
+          .then(offer => {
+            console.log("Setting local description from offer")
+            return peerConnection.setLocalDescription(offer)
+          })
+          .then(() => {
+            console.log("Sending offer to:", targetUserId)
+            socket.emit("voice-offer", {
+              target: targetUserId,
+              offer: peerConnection.localDescription
+            })
+          })
+          .catch(error => {
+            console.error("Error creating/sending offer:", error)
+          })
       }
   
       // Handle ICE candidates
@@ -525,20 +543,29 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log("Received audio track from peer:", targetUserId)
         console.log("Track info:", event.track.kind, event.track.label)
         console.log("Stream info:", event.streams[0].id)
-  
+
+        // Create a new MediaStream for this peer
+        const remoteStream = new MediaStream()
+        peerConnection.getReceivers().forEach((receiver) => {
+          if (receiver.track) {
+            console.log("Adding track to remote stream:", receiver.track.kind, receiver.track.label)
+            remoteStream.addTrack(receiver.track)
+          }
+        })
+
         // Remove any existing audio element for this user
         const existingElement = document.querySelector(`[data-user-id="${targetUserId}"]`)
         if (existingElement) {
           existingElement.remove()
         }
-  
+
         const audioElement = document.createElement("audio")
-        audioElement.srcObject = event.streams[0]
+        audioElement.srcObject = remoteStream
         audioElement.autoplay = true
         audioElement.controls = true
         audioElement.style.display = "block"
         audioElement.setAttribute("data-user-id", targetUserId)
-  
+
         // Add volume control
         const volumeControl = document.createElement("input")
         volumeControl.type = "range"
@@ -550,15 +577,54 @@ document.addEventListener("DOMContentLoaded", () => {
         volumeControl.oninput = (e) => {
           audioElement.volume = e.target.value
         }
-  
+
         const container = document.createElement("div")
         container.style.marginBottom = "10px"
         container.setAttribute("data-user-id", targetUserId)
         container.appendChild(audioElement)
         container.appendChild(volumeControl)
-  
+
         voiceParticipants.appendChild(container)
-  
+
+        // Set up track event listeners
+        event.track.onunmute = () => {
+          console.log("Audio data arriving for track:", event.track.label)
+        }
+
+        event.track.onmute = () => {
+          console.log("Audio data stopped for track:", event.track.label)
+        }
+
+        // Check if we're actually receiving audio data
+        let audioCheckInterval = setInterval(async () => {
+          try {
+            const stats = await peerConnection.getStats()
+            let hasAudioData = false
+            
+            stats.forEach(report => {
+              if (report.type === 'inbound-rtp' && report.kind === 'audio') {
+                if (report.packetsReceived > 0) {
+                  hasAudioData = true
+                }
+              }
+            })
+
+            if (!hasAudioData) {
+              console.log("No audio data received, attempting to reconnect...")
+              clearInterval(audioCheckInterval)
+              peerConnection.close()
+              delete peerConnections[targetUserId]
+              setTimeout(() => {
+                if (isVoiceEnabled) {
+                  createPeerConnection(targetUserId)
+                }
+              }, 2000)
+            }
+          } catch (error) {
+            console.error("Error checking audio stats:", error)
+          }
+        }, 5000) // Check every 5 seconds
+
         audioElement.onloadedmetadata = () => {
           console.log("Audio metadata loaded, attempting to play")
           audioElement.play().catch((e) => {
